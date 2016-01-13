@@ -5,15 +5,180 @@
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
         <style>
           body { margin: 0 auto; padding: 0px; }
-          #myCanvas { background: url(assets/bg.jpg) center; }
+          #myCanvas { background: url('assets/bg.jpg') center; }
+          .form { display: none; }
+          #left { display: block; float: left; width: 600px; }
+          #right { display: block; float: left; width: 400px; margin-left: 30px; }
         </style>
     </head>
     <body>
-        <canvas id="myCanvas" width="600" height="600"></canvas>
+        <div id="left">
+            <canvas id="myCanvas" width="600" height="490"></canvas>
+            <table>
+                <tr>
+                    <td>Moves:</td>
+                    <td class="moves">0</td>
+                </tr>
+                <tr>
+                    <td>Found pairs:</td>
+                    <td class="found-pairs">0</td>
+                </tr>            
+            </table>            
+        </div>
+        <div id="right">
+            <div class="result">
+                <h2>High Scores</h2>
+                <table id="scores" border="1">
+                    <thead>
+                        <th>Name</th>
+                        <th>E-mail</th>
+                        <th>Moves</th>
+                    </thead>
+                </table>
+            </div>  
+            <div class="form">
+                <form>
+                    <input name="imie" placeholder="Imię" type="text">
+                    <input name="email" placeholder="Adres e-mail" type="text">
+                    <button type="submit" class="button">zapisz</button>
+                </form>
+            </div>                      
+        </div>
     </body>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
     <script>
         var canvas = document.getElementById('myCanvas');
-        var context = canvas.getContext('2d');
-        context.fillStyle = 'blue';
+        if (canvas.getContext){
+            var ctx = canvas.getContext('2d');
+        }
+
+        //variables 
+        var tiles = 20, columns = 5, rows = 4, offX = 20, offY = 20, marginLeft = 115, marginTop = 115, tilesLength = 100, moves = 0, canTake = true, foundPairs = 0;
+        var kafle = [], tilesCords = [], uncovered = [-1, -1], xReset = [], yReset = [];
+
+        function createNumberArray(){ //tworzymy tablice z numerkami
+            for (var i = 0; i < tiles; i++){
+                //tile[i] = new _Tiles(i);
+                kafle.push(Math.floor(i / 2));
+            }
+        }
+
+        function drawCovers(){  //metoda rysująca kafelki na ekranie
+            var coverImg = new Image();
+            coverImg.onload = function(){
+                for (var i = 0; i < rows; i++){
+                    for (var j = 0; j < columns; j++){
+                        var xCover = offX + (j * marginLeft);
+                        var yCover = offY + (i * marginTop);
+                        tilesCords.push([xCover, yCover]); // uzupełnianie tablicy wspołrzędnymi każdego kafla
+                        ctx.drawImage(coverImg, xCover, yCover);
+                    }
+                }            
+
+            }
+            coverImg.src = 'assets/coverMemory.png';
+        }
+
+        function shuffle(tab){ // tasowanie tablicy
+            for(var j, x, i = tab.length; i; j = Math.floor(Math.random() * i), x = tab[--i], tab[i] = tab[j], tab[j] = x);
+            return tab;
+        }
+
+        function showFruit(tab, newX, newY){
+            var coverImgD = new Image();
+            coverImgD.onload = function(){
+                ctx.drawImage(coverImgD, newX, newY);                      
+            }
+            coverImgD.src = 'assets/owoce/'+tab+'.png';            
+        }
+
+        function resetTiles(xTab, yTab){
+            var coverImgC = new Image();
+            coverImgC.onload = function(){
+                for (i = 0; i < 2; i++){
+                    ctx.drawImage(coverImgC, xTab[i], yTab[i]);  
+                }                    
+            }
+            coverImgC.src = 'assets/coverMemory.png';
+            clearVariables();
+        }
+
+        function clearVariables(){
+            uncovered = [-1, -1];
+            canTake = true;
+            xReset = [], yReset = [];            
+        }
+
+        function gameOver(moves){
+            alert("Game Over. Number of moves: "+moves);
+            $('.form').css('display', 'block');
+        }
+
+        createNumberArray()
+        shuffle(kafle);
+        drawCovers(); 
+
+        $('#myCanvas').click(function(e) { //rozpoznawanie kafelka po kliknięciu 
+            var x = e.offsetX, y = e.offsetY;
+            if(canTake){
+                for(var i = 0; i < tilesCords.length; i++) {
+                    if(x > tilesCords[i][0]
+                    && x < tilesCords[i][0] + tilesLength
+                    && y > tilesCords[i][1]
+                    && y < tilesCords[i][1] + tilesLength) {
+                        var newX = tilesCords[i][0], newY = tilesCords[i][1];
+                        showFruit(kafle[i], newX, newY);
+                        if (uncovered[0] < 0){
+                            uncovered[0] = kafle[i];
+                            xReset.push(newX);
+                            yReset.push(newY);
+                        }else{
+                            uncovered[1] = kafle[i];
+                            xReset.push(newX);
+                            yReset.push(newY);
+                        }
+
+                        console.log(xReset);
+                        console.log(yReset);
+                        //console.log(uncovered);
+                        if (uncovered[1] >= 0 ){
+                            moves++;
+                            $('.moves').html(moves);
+                            canTake = false;
+                            if (uncovered[0] == uncovered[1]){
+                                console.log("para");
+                                clearVariables();
+                                foundPairs++;
+                                $('.found-pairs').html(foundPairs);
+                                if (foundPairs == 10){
+                                    gameOver(moves);
+                                }                                   
+                            }else{
+                                console.log("nie para");
+                                setTimeout('resetTiles(xReset, yReset)', 500);
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        showScores();    
+        $('.form form').on('submit', function(form){
+            form.preventDefault();
+            $.post('save.php', $('.form form').serialize() + '&moves='+moves, function(data){
+                console.log(data);
+                alert("scores saved");
+                window.setTimeout(function() { $(".form").hide(2000, function() {$( this ).remove();}); }, 200);
+                $(".result table#scores tbody").html("");
+                showScores();
+            });
+        });
+        function showScores(){
+            $.post( "select.php", function( data ) {
+              $.each(data, function(key, value){
+                $('.result table#scores').append('<tr><td>'+value.imie+'</td><td>'+value.email+'</td><td>'+value.moves+'</td></tr>')
+              })
+            }, "json");   
+        }
     </script>
 </html>
