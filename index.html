@@ -151,7 +151,7 @@
                                 foundPairs++;
                                 $('.found-pairs').html(foundPairs);
                                 if (foundPairs == 10){
-                                    gameOver(moves);
+                                    setTimeout('gameOver(moves)', 500);
                                 }                                   
                             }else{
                                 console.log("nie para");
@@ -168,7 +168,7 @@
             $.post('save.php', $('.form form').serialize() + '&moves='+moves, function(data){
                 console.log(data);
                 alert("scores saved");
-                window.setTimeout(function() { $(".form").hide(2000, function() {$( this ).remove();}); }, 200);
+                window.setTimeout(function() { $(".form").hide(1000, function() {$( this ).remove();}); }, 100);
                 $(".result table#scores tbody").html("");
                 showScores();
             });
